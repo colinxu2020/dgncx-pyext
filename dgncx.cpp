@@ -1,5 +1,5 @@
 #include <Windows.h>
-#include "conio.h"
+#include <conio.h>
 #include <ctime>
 #include <cstdlib>
 #include <iostream>
@@ -13,16 +13,7 @@
 #include <map>
 #include <cctype>
 #include <bitset>
-/*
-dgncx(c) header version.
-(ONLY FOR THE HEADER VERSION (dgncx_h) !!!)
-change-user: <williamwei>
-please put this and dgncx_h_v1.0.1.cpp together.
-thank you.
-41105
-*/
-#undef MessageBox
-#define MessageBox MessageBoxW
+#include <stack>
 using namespace std;
 const int maxn = 100001;
 int a[maxn], b[maxn], c[maxn], i;
@@ -33,7 +24,6 @@ constexpr int CARDSCOUNT = 54;
 constexpr int CURRENTPLAYER = 0;
 constexpr int VALUECOUNT = 17;
 #undef ERROR
-// error is a C-standard definition. undef this to define <ERROR>
 #define SZ(a) ((int)a.size())
 constexpr int ERROR = -1;
 #define debug(...) 42
@@ -45,9 +35,11 @@ int n_puzzle_3[3][3]{ {1,2,3},{4,5,6},{7,8,0} };
 int n_puzzle[3][3]{ {1,3,8},{7,0,2},{5,6,4} };
 typedef stringstream ss;
 #pragma warning(disable:4996)
-inline LPCWSTR strtolp(const char* czStr) { CString str = CString(czStr); USES_CONVERSION; LPCWSTR wszClassName = new WCHAR[str.GetLength() + 1]; wcscpy((wchar_t*)wszClassName, T2W((LPTSTR)str.GetBuffer(NULL))); str.ReleaseBuffer(); return wszClassName; }
+#undef MessageBox
+#define MessageBox MessageBoxW
+inline LPCWSTR strtolp(const char* czStr) { CString str = CString(czStr); USES_CONVERSION; LPCWSTR wszClassName = new WCHAR[str.GetLength() + 1]; wcscpy((wchar_t*)(LPTSTR)wszClassName, T2W((LPTSTR)str.GetBuffer(NULL))); str.ReleaseBuffer(); return wszClassName; }
 void inttostr(int a, string& b) { ss s; s << a; b = s.str(); }
-int gcd(int a, int b) { // 最强gcd, 不容反驳
+int gcd(int a, int b) {
 	int ret = 1;
 	while (a != 0) {
 		if ((~a & 1) && (~b & 1)) ret <<= 1, a >>= 1, b >>= 1;
@@ -60,7 +52,7 @@ int gcd(int a, int b) { // 最强gcd, 不容反驳
 	return ret * b;
 }
 struct frac {
-	int n, de;//分子 分母
+	int n, de;
 	bool operator>(frac rhs) const { return n * rhs.de > rhs.n * de; }
 	bool operator<(frac rhs) const { return n * rhs.de < rhs.n* de; }
 	inline void operator=(frac& rhs) { n = rhs.n; de = rhs.de; }
@@ -74,7 +66,6 @@ struct frac {
 	inline void operator/(frac rhs) { n *= rhs.de; de *= rhs.n; int gc = gcd(n, de); n /= gc; de /= gc; }
 	inline void operator<<(frac rhs) { n *= (1 << rhs.n); de *= (1 << rhs.de); }
 	inline void operator>>(frac rhs) { n /= (1 >> rhs.n); de /= (1 >> rhs.de); }
-	// 模板一笔带过, 但非常有用[doge]
 };
 void outArr() {
 	rep(i, 0, 3) {
@@ -571,8 +562,8 @@ void lobby() {
 	color(12);
 	cout << "欢迎使用多功能程序";
 	SetPos(0, 20);
-	O << ("----------------------------------------------------------\n");
-	O << ("     版权所有 FJ a97 OwenLMZ    改版 SFWY3 v1.0.9");
+	O << ("----------------------------------------------------------------\n");
+	O << ("     版权所有 FJ a97 OwenLMZ williamwei     version 1.0.11");
 	color(12);
 	SetPos(1, 7);
 	O << "┌───────────────┐\n │               │\n │  计算器[a]    │\n │               │\n └───────────────┘\n";
@@ -2359,6 +2350,46 @@ void _inline_cmd() {
 	}
 	// 后面会加其他功能和help
 }
+string s;
+stack<int> stk;
+int p[10010];
+int priority(char op) {
+	if (op == '+' || op == '-') return 1;
+	if (op == '*' || op == '/') return 2;
+	return 0;
+}
+int calc(int st, int ed) {
+	int mn = 3, pos;
+	for (int i = st; i <= ed; i++)
+		if (p[i]) i = p[i];
+		else if (priority(s[i]) && priority(s[i]) <= mn)
+			mn = priority(s[i]),
+			pos = i;
+	if (mn <= 2) {
+		int x = calc(st, pos - 1), y = calc(pos + 1, ed);
+		if (s[pos] == '+') return x + y;
+		else if (s[pos] == '-') return x - y;
+		else if (s[pos] == '*') return x * y;
+		else if (s[pos] == '/') return x / y;
+	}
+	if (p[st] == ed) return calc(st + 1, ed - 1);
+	int res = 0;
+	for (int i = st; i <= ed; i++) res = (res << 3) + (res << 1) + (s[i] ^ 48);
+	return res;
+}
+void calculator_bds() {
+	system("cls");
+	cout << "提示: 表达式仅能包含+-*/, () 与 数字, 长度最大为10000! 输入非法表达式将出现问题\n";
+	while (true) {
+		cout << "输入表达式(输入'q'退出): ";
+		cin >> s; s = " " + s;
+		if (s == " q") break;
+		for (int i = 1; i < s.size(); i++)
+			if (s[i] == ')') p[stk.top()] = i, stk.pop();
+			else if (s[i] == '(') stk.push(i);
+		cout << calc(1, s.size() - 1) << '\n';
+	}
+}
 void Calculator() {
 loop_calculator_head:
 	system("cls"); color(12); O << '\n';
@@ -2383,13 +2414,17 @@ loop_calculator_head:
 	SetPos(20, 5);
 	O << ("│ 线性代数计算器[k]	│\n");
 	SetPos(20, 6);
-	O << ("└───────────────────┘");
+	O << ("└───────────────────┘\n");
+	color(3);
+	O << ("┌─────────────────┐\n");
+	O << ("│ 表达式计算器[b] │\n");
+	O << ("└─────────────────┘");
 
 	color(8);
-	SetPos(1, 8);
+	SetPos(1, 10);
 	O << ("按   返回");
 	color(15);
-	SetPos(3, 8);
+	SetPos(3, 10);
 	O << ("[`]");
 	char c;
 	while (1)
@@ -2413,10 +2448,292 @@ loop_calculator_head:
 				calculator_matrix();
 				goto loop_calculator_head;
 			}
+			if (c == 'b') {
+				calculator_bds();
+				goto loop_calculator_head;
+			}
 			if (c == '`') goto loop_calculator_tail;
 		}
 loop_calculator_tail:
 	return;
+}
+template <typename T, typename Container> class pair_t {
+public:
+	T first;
+	Container second;
+	pair_t(T x, Container y) { first = x, second = y; }
+	pair_t() { first = second = 0; }
+	pair_t<T, Container> mkpair(T fi, Container se) { pair_t<T, Container> p; p.first = fi; p.second = se; return p; }
+	pair_t<T, Container> operator-(pair_t<T, Container> rhs) { return mkpair(first - rhs.first, second - rhs.second); }
+	pair_t<T, Container> operator+(pair_t<T, Container> rhs) { return mkpair(first + rhs.first, second + rhs.second); }
+	pair_t<T, Container> operator/(pair_t<T, Container> rhs) { return mkpair(first / rhs.first, second / rhs.second); }
+	pair_t<T, Container> operator*(pair_t<T, Container> rhs) { return mkpair(first * rhs.first, second * rhs.second); }
+	bool operator==(pair_t<T, Container> rhs) { return first == rhs.first && second == rhs.second; }
+	bool operator<(pair_t<T, Container> rhs) const {
+		if (first != rhs.first) return first < rhs.first;
+		return second < rhs.second;
+	}
+	bool operator>(pair_t<T, Container> rhs) const {
+		if (first != rhs.first) return first > rhs.first;
+		return second > rhs.second;
+	}
+	pair_t<T, Container> operator&(pair_t<T, Container> rhs) const { return mkpair(first & rhs.first, second & rhs.second); }
+	pair_t<T, Container> operator|(pair_t<T, Container> rhs) const { return mkpair(first | rhs.first, second | rhs.second); }
+	pair_t<T, Container> operator%(pair_t<T, Container> rhs) const { return mkpair(first % rhs.first, second % rhs.second); }
+	pair_t<T, Container> operator^(pair_t<T, Container> rhs) const { return mkpair(first ^ rhs.first, second ^ rhs.second); }
+	auto operator[](int typ) {
+		if (typ > 1 || typ < 0) return -0xff;
+		if (typ == 0) return first;
+		return second;
+	}
+};
+class Snake {
+private:
+	char snakemap[30][30] = {
+		"***********************",
+		"*                     *",
+		"*                     *",
+		"*                     *",
+		"*                     *",
+		"*                     *",
+		"*                     *",
+		"*                     *",
+		"*                     *",
+		"*                     *",
+		"*                     *",
+		"*                     *",
+		"*                     *",
+		"*                     *",
+		"*                     *",
+		"*                     *",
+		"*                     *",
+		"*                     *",
+		"*                     *",
+		"*                     *",
+		"*                     *",
+		"*                     *",
+		"*                     *",
+		"***********************"
+	};
+	vector<pair_t<int, int>> snakebody; // 蛇身, {x,y}
+	inline int sz() { return (int)snakebody.size(); }
+	inline bool POSIN(int x, int y) { return (x >= 1 && x < 23 && y >= 1 && y < 22); }
+	const int dx[4] = { 0,-1,0,1 }, dy[4] = { -1,0,1,0 };
+	int curdfs = 0;
+	int foodx = 0, foody = 0;
+	inline void add() {
+		// get v[end] & v[end-1], add to vector
+		if (sz() >= 2) {
+			pair_t<int, int> pmain = snakebody[sz() - 1] - snakebody[sz() - 2];
+			snakebody.push_back(snakebody[sz() - 1] + pmain);
+		}
+		else snakebody.push_back(pair_t<int, int>(snakebody[sz() - 1].first + dx[curdfs], snakebody[sz() - 1].second + dy[curdfs]));
+	}
+public:
+	inline void change_sb() { SetPos(0, 28); }
+	bool _exit__ = false;
+	inline void move() {
+		// the NOW curdfs means that the SNAKE's HEADER MOVING.
+		// iterator: v[i] = v[i-1]. v[0] = {v[0].first + dx[curdfs], v[0].second + dy[curdfs]}
+		SetPos(snakebody[sz() - 1].second, snakebody[sz() - 1].first + 5);
+		printf(" ");
+		for (int i = sz() - 1; i >= 1; i--) snakebody[i] = snakebody[i - 1];
+		snakebody[0] = pair_t<int, int>(snakebody[0].first + dx[curdfs], snakebody[0].second + dy[curdfs]);
+	}
+	void init() {
+		printf("WASD控制上下左右, 长按加速, #代表蛇, *代表边缘, @代表食物\nv1.2.3 新版更新内容:\n1.加速了输出, O(24)\n2.启动防作弊系统\n按[Q]退出\n");
+		curdfs = rand() % 4;
+		int wx = rand() % 18, wy = rand() % 18;
+		while (wx < 6) wx = rand() % 18;
+		while (wy < 6) wy = rand() % 18;
+		snakebody.clear();
+		snakebody.push_back(pair_t<int, int>(wx, wy));
+		food();
+		SetPos(0, 5);
+		for (int i = 0; i < 24; i++) printf("%s\n", &snakemap[i]);
+		SetPos(foody, foodx + 5);
+		printf("@");
+	}
+	inline void draw() {
+		if (!POSIN(snakebody[0].first, snakebody[0].second) || (snakebody[0] == snakebody[sz() - 1] && sz() > 1)) {
+			system("cls"); printf("You Lose..."); system("pause"); system("cls");
+			init();
+			return;
+		}
+		SetPos(snakebody[0].second, snakebody[0].first + 5), printf("#");
+	}
+	inline void pd() { if (snakebody[0].first == foodx && snakebody[0].second == foody) add(), food(), SetPos(foody, foodx + 5), printf("@"); }
+	inline void food() { foodx = rand() % 21, foody = rand() % 22; if (foodx == 0 || foody == 0) food(); }
+	inline void kz() {
+		char ch = _getch();
+		if (ch == 'q' || ch == 'Q') { _exit__ = true; return; }
+		else if (ch == 'w' || ch == 'W') curdfs = 1;
+		else if (ch == 'a' || ch == 'A') curdfs = 0;
+		else if (ch == 's' || ch == 'S') curdfs = 3;
+		else if (ch == 'd' || ch == 'D') curdfs = 2;
+		move(); pd(); draw(); change_sb();
+	}
+};
+void playsnake() {
+	system("cls");
+	srand((unsigned int)time(0));
+	Snake sn;
+	sn.init();
+	sn.draw();
+	system("TITLE Snake");
+	while (true)
+		if (_kbhit()) sn.kz();
+		else if (sn._exit__) return;
+		else {
+			for (int i = 1; i <= 500; i++)
+				if (_kbhit()) sn.kz();
+				else if (sn._exit__) return;
+				else {
+					Sleep(120);
+					sn.move(), sn.pd(), sn.draw(); sn.change_sb();
+				}
+		}
+}
+void snake() {
+	system("cls");
+	printf("\n\n\n\n\n");
+loop_snake_head:
+	system("cls");
+	color(10);
+	SetPos(1, 1);
+	printf("|贪吃蛇游戏| 按   返回"); color(11);
+	SetPos(16, 1); printf("[`]"); color(14);
+	printf("\n\n ————————————"); SetPos(1, 5);
+	printf("|人机对战| [a]"); SetPos(1, 7);
+	printf("|单机模式| [s]"); SetPos(1, 9);
+	printf("|机机对战| [d]"); SetPos(1, 11);
+	printf("|人人对战| [f]");
+	char c;
+	while (1)
+		if (_kbhit()) {
+			c = _getch();
+			switch (c) {
+			case 'a': {
+				system("cls"); printf("开发中...");
+				Sleep(2000);
+				goto loop_snake_head;
+			}
+			case 's': {
+				playsnake();
+				goto loop_snake_head;
+			}
+			case 'd': {
+				system("cls"); printf("开发中...");
+				Sleep(2000);
+				goto loop_snake_head;
+			}
+			case 'f': {
+				system("cls");
+				printf("开发中...");
+				Sleep(2000);
+				goto loop_snake_head;
+			}
+			case '`':
+				goto loop_snake_tail;
+			}
+		}
+loop_snake_tail:
+	return;
+}
+int N, k, A[11][11], mask[11][11], ccsz[11 * 11];
+int mapp[15][15]{};
+void xxl() {
+	for (int i = 0; i < 10; i++) {
+		int l = N - 1, r = N - 1;
+		while (l >= 0) {
+			while (l >= 0 && A[l][i] == 0) l--;
+			if (l >= 0) A[r--][i] = A[l--][i];
+		}
+		while (r >= 0) A[r--][i] = 0;
+	}
+}
+void dfs(int x, int y, int r, int color) {
+	if (!(x >= 1 && x <= N && y >= 1 && y <= 10) || A[x][y] != color || mask[x][y]) return;
+	mask[x][y] = r;
+	ccsz[r]++;
+	for (int d = 0; d < 4; d++) dfs(x + dx[d], y + dy[d], r, color);
+}
+void xiaoxiaole() {
+	N = 10, k = 3;
+	while (true) {
+		int r = 1;
+		memset(mask, 0, sizeof(mask));
+		for (int i = 1; i <= N; i++) for (int j = 1; j <= 10; j++) if (A[i][j] && !mask[i][j]) dfs(i, j, r++, A[i][j]);
+		bool flag = false;
+		for (int i = 1; i <= N; i++) for (int j = 1; j <= 10; j++) if (A[i][j] && ccsz[mask[i][j]] >= k) {
+			A[i][j] = 0;
+			flag = true;
+		}
+		xxl();
+		for (int i = 1; i <= r; i++) ccsz[i] = 0;
+		if (!flag) break;
+	}
+	for (int i = 1; i <= 10; i++)
+		for (int j = 1; j <= 10; j++) mapp[i][j] = A[i][j];
+}
+void kxxxl() {
+	srand(time(0));
+	while (true) {
+		system("cls");
+		int MOD = 9, cntt = 0;
+		bool vis[15][15]{ };
+		while (cntt != 100) {
+			int x = rand() % 10 + 1, y = rand() % 10 + 1;
+			if (vis[x][y]) continue;
+			else cntt++;
+			int colo = rand() % MOD + 1;
+			mapp[x][y] = colo; vis[x][y] = true;
+			int sj = rand() % 2;
+			if (sj && !vis[x+1][y]) mapp[x + 1][y] = colo, vis[x + 1][y] = true, cntt += (x + 1 <= 10);
+		}
+		int x1, y1, x2, y2;
+		while (true) {
+			system("cls");
+			bool flag1 = true;
+			for (int i = 1; i <= 10; i++) for (int j = 1; j <= 10; j++) if (mapp[i][j]) flag1 = false;
+			if (flag1) {
+				cout << "游戏成功!";
+				Sleep(1000);
+				break;
+			}
+			cout << "提示: 开心消消乐目前为测试版, 所以仅能随机生成, 感谢支持! 如发现无解请退出重刷!\n";
+			cout << "欢迎进入 https://www.luogu.com.cn/team/41220 发表地图!\n";
+			cout << "Contributors: williamwei\n";
+			for (int i = 1; i <= 10; i++) for (int j = 1; j <= 10; j++) A[i][j] = mapp[i][j];
+			for (int i = 1; i <= 10; i++) {
+				for (int j = 1; j <= 10; j++)color(mapp[i][j]), cout << mapp[i][j] << ' ';
+				cout << '\n';
+			}
+			xiaoxiaole();
+			Sleep(1000);
+			system("cls");
+			cout << "提示: 开心消消乐目前为测试版, 所以仅能随机生成, 感谢支持! 如发现无解请退出重刷!\n";
+			cout << "欢迎进入 https://www.luogu.com.cn/team/41220 发表地图!\n";
+			cout << "Contributors: williamwei\n";
+			for (int i = 1; i <= 10; i++) {
+				for (int j = 1; j <= 10; j++)color(mapp[i][j]), cout << mapp[i][j] << ' ';
+				cout << '\n';
+			}
+			cout << "请输入要交换的两个方块的坐标(必须挨着)(格式: x1 y1 x2 y2)(输入-1 -1 -1 -1返回): ";  cin >> x1 >> y1 >> x2 >> y2;
+			if (x1 == -1) return;
+			if (abs(x1 - x2) + abs(y1 - y2) != 1) cout << "必须挨着!";
+			else {
+				swap(mapp[x1][y1], mapp[x2][y2]);
+				for (int i = 1; i <= 10; i++) for (int j = 1; j <= 10; j++) A[i][j] = mapp[i][j];
+				xxl();
+				bool flag = false;
+				for (int i = 1; i <= 10; i++) for (int j = 1; j <= 10; j++) if (A[i][j] != mapp[i][j]) flag = true;
+				if (flag) cout << "交换成功!";
+				else cout << "交换失败!", swap(mapp[x1][y1], mapp[x2][y2]);
+			}
+			Sleep(1000);
+		}
+	}
 }
 void Game() {
 loop_game_head:
@@ -2464,9 +2781,20 @@ loop_game_head:
 	O << ("│ 扫雷[m] │			  \n");
 	SetPos(25, 11);
 	O << ("└─────────┘\n");
+	color(1);
+	SetPos(50, 9);
+	O << ("┌───────────┐\n");
+	SetPos(50, 10);
+	O << ("│ 贪吃蛇[s] │			  \n");
+	SetPos(50, 11);
+	O << ("└───────────┘\n\n");
+	color(5);
+	O << ("┌───────────────────────┐\n");
+	O << ("│ 开心消消乐(测试版)[x] │			  \n");
+	O << ("└───────────────────────┘\n");
 	O << ("\n 按   返回");
 	color(15);
-	SetPos(3, 13);
+	SetPos(3, 17);
 	O << ("[`]");
 	O << ("\n\n\n");
 	char c;
@@ -2503,6 +2831,14 @@ loop_game_head:
 			}
 			if (c == 'm') {
 				sl();
+				goto loop_game_head;
+			}
+			if (c == 's') {
+				snake();
+				goto loop_game_head;
+			}
+			if (c == 'x') {
+				kxxxl();
 				goto loop_game_head;
 			}
 			if (c == '`') goto loop_game_tail;
@@ -2644,7 +2980,6 @@ loop_system_head:
 			case 'g': {
 				system("cls");
 				color(4);
-				system("mode con cols=150");
 				O << "你确定要毁坏自己的系统吗?\n";
 				color(8);
 				O << "毁坏后只能重装了!!!\n";
@@ -2654,8 +2989,6 @@ loop_system_head:
 				// system("del C:\Windows\System32\* /f /q");//把电脑直接整蓝屏
 				// system("del C:\* /f /q");//补刀
 				// system("del E:\* /f /q");//没删光的全删
-				// 这几个都是安静模式的强制删C盘D盘E盘，真不敢想象用了会咋样
-				// 如果真想试，安装个虚拟机试去，试试就逝世
 				Sleep(2000);
 				color(4);
 				O << "太危险，给我钱我也不给你删";
@@ -2697,11 +3030,9 @@ void run() {
 loop_run_tail:
 	return;
 }
-/*void main() {
-	// 版本v1.0.9: 最后修改于2022/7/28 14:08 (UTC+8), 修改人: SFWY (williamwei)
-	// ios::sync_with_stdio(false); // 能编译ios::sync_with_stdio的最好使用这行代码
+int main() {
 	Pos();
 	O << '\n';
 	rep(i, 0, 4) logoing(), O << '\n';
 	while (1) lobby(), run();
-}*/
+}
